@@ -1138,6 +1138,7 @@ class BertLMHeadModel(BertPreTrainedModel):
         inputs_embeds=None,
         encoder_hidden_states=None,
         encoder_attention_mask=None,
+        loss_reduction='mean',
         labels=None,
         past_key_values=None,
         use_cache=None,
@@ -1214,7 +1215,7 @@ class BertLMHeadModel(BertPreTrainedModel):
             # we are doing next-token prediction; shift prediction scores and input ids by one
             shifted_prediction_scores = prediction_scores[:, :-1, :].contiguous()
             labels = labels[:, 1:].contiguous()
-            loss_fct = CrossEntropyLoss()
+            loss_fct = CrossEntropyLoss(reduction=loss_reduction)
             lm_loss = loss_fct(shifted_prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
@@ -1292,6 +1293,7 @@ class BertForMaskedLM(BertPreTrainedModel):
         inputs_embeds=None,
         encoder_hidden_states=None,
         encoder_attention_mask=None,
+        loss_reduction='mean',
         labels=None,
         output_attentions=None,
         output_hidden_states=None,
@@ -1325,7 +1327,7 @@ class BertForMaskedLM(BertPreTrainedModel):
 
         masked_lm_loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()  # -100 index = padding token
+            loss_fct = CrossEntropyLoss(reduction=loss_reduction)  # -100 index = padding token
             masked_lm_loss = loss_fct(prediction_scores.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
@@ -1377,6 +1379,7 @@ class BertForNextSentencePrediction(BertPreTrainedModel):
         position_ids=None,
         head_mask=None,
         inputs_embeds=None,
+        loss_reduction='mean',
         labels=None,
         output_attentions=None,
         output_hidden_states=None,
@@ -1437,7 +1440,7 @@ class BertForNextSentencePrediction(BertPreTrainedModel):
 
         next_sentence_loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
+            loss_fct = CrossEntropyLoss(reduction=loss_reduction)
             next_sentence_loss = loss_fct(seq_relationship_scores.view(-1, 2), labels.view(-1))
 
         if not return_dict:
@@ -1486,6 +1489,7 @@ class BertForSequenceClassification(BertPreTrainedModel):
         position_ids=None,
         head_mask=None,
         inputs_embeds=None,
+        loss_reduction='mean',
         labels=None,
         output_attentions=None,
         output_hidden_states=None,
@@ -1527,16 +1531,16 @@ class BertForSequenceClassification(BertPreTrainedModel):
                     self.config.problem_type = "multi_label_classification"
 
             if self.config.problem_type == "regression":
-                loss_fct = MSELoss()
+                loss_fct = MSELoss(reduction=loss_reduction)
                 if self.num_labels == 1:
                     loss = loss_fct(logits.squeeze(), labels.squeeze())
                 else:
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss()
+                loss_fct = CrossEntropyLoss(reduction=loss_reduction)
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
-                loss_fct = BCEWithLogitsLoss()
+                loss_fct = BCEWithLogitsLoss(reduction=loss_reduction)
                 loss = loss_fct(logits, labels)
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -1582,6 +1586,7 @@ class BertForMultipleChoice(BertPreTrainedModel):
         position_ids=None,
         head_mask=None,
         inputs_embeds=None,
+        loss_reduction='mean',
         labels=None,
         output_attentions=None,
         output_hidden_states=None,
@@ -1626,7 +1631,7 @@ class BertForMultipleChoice(BertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
+            loss_fct = CrossEntropyLoss(reduction=loss_reduction)
             loss = loss_fct(reshaped_logits, labels)
 
         if not return_dict:
@@ -1677,6 +1682,7 @@ class BertForTokenClassification(BertPreTrainedModel):
         position_ids=None,
         head_mask=None,
         inputs_embeds=None,
+        loss_reduction='mean',
         labels=None,
         output_attentions=None,
         output_hidden_states=None,
@@ -1708,7 +1714,7 @@ class BertForTokenClassification(BertPreTrainedModel):
 
         loss = None
         if labels is not None:
-            loss_fct = CrossEntropyLoss()
+            loss_fct = CrossEntropyLoss(reduction=loss_reduction)
             # Only keep active parts of the loss
             if attention_mask is not None:
                 active_loss = attention_mask.view(-1) == 1
@@ -1769,6 +1775,7 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         inputs_embeds=None,
         start_positions=None,
         end_positions=None,
+        loss_reduction='mean',
         output_attentions=None,
         output_hidden_states=None,
         return_dict=None,
@@ -1816,7 +1823,7 @@ class BertForQuestionAnswering(BertPreTrainedModel):
             start_positions.clamp_(0, ignored_index)
             end_positions.clamp_(0, ignored_index)
 
-            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index, reduction=loss_reduction)
             start_loss = loss_fct(start_logits, start_positions)
             end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
